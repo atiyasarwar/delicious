@@ -7,19 +7,34 @@ const Recipe = require("../../models/Recipe");
 
 // Validation
 const validateRecipeInput = require("../../validation/recipes");
+const validatePagination = require("../../validation/pagination");
 
 // @route   GET api/posts/test
 // @desc    Tests post route
 // @access  Public
 router.get("/test", (req, res) => res.json({msg: "Recipes Works"}));
 
-// @route   GET api/recipes
-// @desc    Get recipes
-// @access  Public
-router.get("/", (req, res) => {
-  Recipe.find()
+// @route   GET api/recipes/:category&:type
+// @desc    Get recipes by category and type
+// @access  Private
+router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
+  const {errors, isValid} = validatePagination(req.query);
+
+  // Check Validation
+  if (!isValid) {
+    // If any errors, send 400 with errors object
+    return res.status(400).json(errors);
+  }
+  const queryParams = {
+    ...req.query,
+  };
+  delete queryParams.page;
+  delete queryParams.limit;
+  Recipe.find(queryParams)
     .sort({date: -1})
-    .then(posts => res.json(posts))
+    .skip((Number(req.query.page) - 1) * Number(req.query.limit))
+    .limit(Number(req.query.limit))
+    .then(recipe => res.json({recipe, count: recipe.length}))
     .catch(err => res.status(404).json({norecipefound: "No recipes found"}));
 });
 
@@ -28,7 +43,7 @@ router.get("/", (req, res) => {
 // @access  Public
 router.get("/:id", (req, res) => {
   Recipe.findById(req.params.id)
-    .then(post => res.json(post))
+    .then(recipe => res.json(recipe))
     .catch(err =>
       res.status(404).json({norecipefound: "No recipes found with that ID"})
     );
@@ -57,7 +72,7 @@ router.post("/", passport.authenticate("jwt", {session: false}), (req, res) => {
     user_id: req.user.id,
   });
 
-  newRecipe.save().then(post => res.json(post));
+  newRecipe.save().then(recipe => res.json(recipe));
 });
 
 // @route   DELETE api/recipe/:id
