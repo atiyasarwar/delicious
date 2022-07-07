@@ -1,4 +1,5 @@
 module.exports = {
-  mongoURI: "mongodb://localhost:27017/delicious",
+  mongoURI:
+    "mongodb+srv://atiyasarwar:atiyasarwar1@freedb.hedre.mongodb.net/?retryWrites=true&w=majority",
   secretOrKey: "secret",
 };
