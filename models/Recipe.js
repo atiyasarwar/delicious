@@ -22,19 +22,26 @@ const RecipeSchema = new Schema({
     type: Array,
     required: true,
   },
+  meal_type: {
+    type: String,
+    required: true,
+  },
+  cuisine: {
+    type: String,
+    required: true,
+  },
+  calorie_type: {
+    type: String,
+    required: true,
+  },
   category: {
     type: String,
+  },
+  calories_per_serving: {
+    type: Number,
     required: true,
   },
-  foodType: {
-    type: String,
-    required: true,
-  },
-  type: {
-    type: String,
-    required: true,
-  },
-  calories: {
+  serving_size: {
     type: Number,
     required: true,
   },

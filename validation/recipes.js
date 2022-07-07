@@ -7,11 +7,12 @@ module.exports = function validateRecipeInput(data) {
   data.name = !isEmpty(data.name) ? data.name : "";
   data.image = !isEmpty(data.image) ? data.image : "";
   data.ingredients = !isEmpty(data.ingredients) ? data.ingredients : "";
+  data.ingredients.weight = !isEmpty(data.ingredients.weight)
+    ? data.ingredients.weight
+    : "";
   data.procedure = !isEmpty(data.procedure) ? data.procedure : "";
-  data.category = !isEmpty(data.category) ? data.category : "";
-  data.foodType = !isEmpty(data.foodType) ? data.foodType : "";
-  data.type = !isEmpty(data.type) ? data.type : "";
-  data.calories = !isEmpty(data.calories) ? data.calories : "";
+  data.meal_type = !isEmpty(data.meal_type) ? data.meal_type : "";
+  data.cuisine = !isEmpty(data.cuisine) ? data.cuisine : "";
 
   if (!Validator.isLength(data.name, {min: 10, max: 300})) {
     errors.name = "Recipe name is required.";
@@ -33,20 +34,12 @@ module.exports = function validateRecipeInput(data) {
     errors.procedure = "Procedure are required.";
   }
 
-  if (Validator.isEmpty(data.category)) {
-    errors.category = "Category is required.";
+  if (Validator.isEmpty(data.meal_type)) {
+    errors.mealType = "Category is required.";
   }
 
-  if (Validator.isEmpty(data.foodType)) {
-    errors.foodType = "Recipe type is required.";
-  }
-
-  if (Validator.isEmpty(data.type)) {
-    errors.type = "Calorie type is required.";
-  }
-
-  if (Validator.isEmpty(String(data.calories))) {
-    errors.calories = "Calorie count is required.";
+  if (Validator.isEmpty(data.cuisine)) {
+    errors.cuisine = "Recipe type is required.";
   }
 
   return {
