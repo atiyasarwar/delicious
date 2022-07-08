@@ -4,6 +4,7 @@ const passport = require("passport");
 
 // Recipe model
 const Recipe = require("../../models/Recipe");
+const Favourite = require("../../models/Favourite");
 
 // Validation
 const validateRecipeInput = require("../../validation/recipes");
@@ -14,8 +15,8 @@ const validatePagination = require("../../validation/pagination");
 // @access  Public
 router.get("/test", (req, res) => res.json({msg: "Recipes Works"}));
 
-// @route   GET api/recipes/:mealType&:cuisine&:calorie_type
-// @desc    Get recipes by mealType, cuisine, calorie_type
+// @route   GET api/recipes/:name&:mealType&:cuisine&:calorie_type&:suggested
+// @desc    Get recipes by name, mealType, cuisine, calorie_type
 // @access  Private
 router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
   const {errors, isValid} = validatePagination(req.query);
@@ -25,29 +26,57 @@ router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
     // If any errors, send 400 with errors object
     return res.status(400).json(errors);
   }
-  const queryParams = {
+  let queryParams = {
     ...req.query,
   };
+  if (req.query.name) {
+    queryParams.name = {$regex: req.query.name, $options: "i"};
+  }
+  if (req.query.suggested == "true") {
+    if (req.user.bmi <= 18.5) {
+      queryParams.calories_per_serving = {$gte: 200};
+    }
+    if (req.user.bmi > 18.5 && req.user.bmi < 24.9) {
+      queryParams.calories_per_serving = {$gte: 200, $lte: 400};
+    }
+    if (req.user.bmi > 24.9) {
+      queryParams.calories_per_serving = {$lte: 200};
+    }
+    delete queryParams.suggested;
+  }
   delete queryParams.page;
   delete queryParams.limit;
   Recipe.find(queryParams)
     .sort({date: -1})
     .skip((Number(req.query.page) - 1) * Number(req.query.limit))
     .limit(Number(req.query.limit))
-    .then(recipe => res.json({recipe, count: recipe.length}))
-    .catch(err => res.status(404).json({norecipefound: "No recipes found"}));
+    .then(recipes => res.json({recipes, count: recipe.length}))
+    .catch(err => res.status(404).json({msg: "No recipes found"}));
 });
 
 // @route   GET api/recipes/:id
 // @desc    Get recipes by id
-// @access  Public
-router.get("/:id", (req, res) => {
-  Recipe.findById(req.params.id)
-    .then(recipe => res.json(recipe))
-    .catch(err =>
-      res.status(404).json({norecipefound: "No recipes found with that ID"})
-    );
-});
+// @access  Private
+router.get(
+  "/:id",
+  passport.authenticate("jwt", {session: false}),
+  (req, res) => {
+    Recipe.findById(req.params.id).then(recipe => {
+      Favourite.findOne({
+        recipe_id: req.params.id,
+        user_id: req.user.id,
+      })
+        .then(favourite => {
+          favourite
+            ? res.json({...recipe._doc, is_favourite: 1})
+            : res.json({...recipe._doc, is_favourite: 0});
+        })
+        .catch(err =>
+          res.status(404).json({msg: "No recipes found with that ID"})
+        );
+    });
+  }
+);
 
 // @route   POST api/recipes/create
 // @desc    Create recipe
@@ -59,7 +88,7 @@ router.post(
     if (!req.user.is_admin) {
       return res
         .status(401)
-        .json({unauthorized: "You are not authorized to perform this action."});
+        .json({msg: "You are not authorized to perform this action."});
     }
 
     const {errors, isValid} = validateRecipeInput(req.body);
@@ -77,7 +106,6 @@ router.post(
     const {ingredients} = req.body;
 
     ingredients.map(ingredient => {
-      console.log(ingredient);
       calories_per_serving +=
         (ingredient.calories_p_100 * ingredient.weight) / 100;
       serving_size += ingredient.weight;
@@ -117,78 +145,50 @@ router.delete(
     Recipe.findById(req.params.id)
       .then(recipe => {
         if (recipe.user_id.toString() !== req.user.id) {
-          return res.status(401).json({unauthorized: "User not authorized"});
+          return res.status(401).json({msg: "User not authorized"});
         }
 
         // Delete
         recipe.remove().then(() => res.json({success: true}));
       })
-      .catch(err => res.status(404).json({recipenotfound: "No recipe found"}));
+      .catch(err => res.status(404).json({msg: "No recipe found"}));
   }
 );
 
-// @route   POST api/recipes/favorite/:id
-// @desc    Like post
+// @route   POST api/recipes/favourite/:id:action
+// @desc    Add/remove recipe to favourite
 // @access  Private
 router.post(
-  "/favorite/:id",
+  "/favourite/:id/:action",
   passport.authenticate("jwt", {session: false}),
   (req, res) => {
-    Profile.findOne({user: req.user.id}).then(profile => {
-      Recipe.findById(req.params.id)
-        .then(post => {
-          if (
-            post.likes.filter(like => like.user.toString() === req.user.id)
-              .length > 0
-          ) {
-            return res
-              .status(400)
-              .json({alreadyliked: "User already liked this post"});
-          }
+    if (req.params.action == 1) {
+      const newFavourite = new Favourite({
+        user_id: req.user.id,
+        recipe_id: req.params.id,
+      });
 
-          // Add user id to likes array
-          post.likes.unshift({user: req.user.id});
+      Favourite.findOne({
+        user_id: req.user.id,
+        recipe_id: req.params.id,
+      }).then(favourite =>
+        favourite
+          ? res.json({msg: "Already added to favourite"})
+          : newFavourite.save().then(favourite => res.json(favourite))
+      );
+    }
 
-          post.save().then(post => res.json(post));
-        })
-        .catch(err => res.status(404).json({postnotfound: "No post found"}));
-    });
+    if (req.params.action == 2) {
+      Favourite.findOne({
+        user_id: req.user.id,
+        recipe_id: req.params.id,
+      }).then(favourite =>
+        favourite
+          ? favourite.remove().then(() => res.json({success: true}))
+          : res.json({msg: "Favourite not found"})
+      );
+    }
   }
 );
-
-// @route   POST api/recipes/unlike/:id
-// @desc    Unlike post
-// @access  Private
-// router.post(
-//   "/unlike/:id",
-//   passport.authenticate("jwt", {session: false}),
-//   (req, res) => {
-//     Profile.findOne({user: req.user.id}).then(profile => {
-//       Recipe.findById(req.params.id)
-//         .then(post => {
-//           if (
-//             post.likes.filter(like => like.user.toString() === req.user.id)
-//               .length === 0
-//           ) {
-//             return res
-//               .status(400)
-//               .json({notliked: "You have not yet liked this post"});
-//           }
-
-//           // Get remove index
-//           const removeIndex = post.likes
-//             .map(item => item.user.toString())
-//             .indexOf(req.user.id);
-
-//           // Splice out of array
-//           post.likes.splice(removeIndex, 1);
-
-//           // Save
-//           post.save().then(post => res.json(post));
-//         })
-//         .catch(err => res.status(404).json({postnotfound: "No post found"}));
-//     });
-//   }
-// );
 
 module.exports = router;

@@ -9,9 +9,12 @@ const passport = require("passport");
 // Load Input Validation
 const validateRegisterInput = require("../../validation/register");
 const validateLoginInput = require("../../validation/login");
+const validatePagination = require("../../validation/pagination");
 
 // Load User model
 const User = require("../../models/User");
+const Recipe = require("../../models/Recipe");
+const Favourite = require("../../models/Favourite");
 
 // @route   GET api/users/test
 // @desc    Tests users route
@@ -129,6 +132,34 @@ router.get(
       height: req.user.height,
       bmi: req.user.bmi,
     });
+  }
+);
+
+// @route   GET api/users/favourites
+// @desc    Get favourites
+// @access  Private
+router.get(
+  "/favourites",
+  passport.authenticate("jwt", {session: false}),
+  (req, res) => {
+    const {errors, isValid} = validatePagination(req.query);
+
+    // Check Validation
+    if (!isValid) {
+      // If any errors, send 400 with errors object
+      return res.status(400).json(errors);
+    }
+
+    Favourite.find({user_id: req.user.id})
+      .sort({date: -1})
+      .skip((Number(req.query.page) - 1) * Number(req.query.limit))
+      .limit(Number(req.query.limit))
+      .then(async favourites => {
+        const recipeList = favourites.map(item =>
+          Recipe.findById(item.recipe_id).then(recipe => recipe)
+        );
+        res.json(await Promise.all(recipeList));
+      });
   }
 );
 
