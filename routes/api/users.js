@@ -158,7 +158,8 @@ router.get(
         const recipeList = favourites.map(item =>
           Recipe.findById(item.recipe_id).then(recipe => recipe)
         );
-        res.json(await Promise.all(recipeList));
+        const recipes = await Promise.all(recipeList);
+        res.json({recipes, count: recipes.length});
       });
   }
 );

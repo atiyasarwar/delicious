@@ -50,7 +50,7 @@ router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
     .sort({date: -1})
     .skip((Number(req.query.page) - 1) * Number(req.query.limit))
     .limit(Number(req.query.limit))
-    .then(recipes => res.json({recipes, count: recipe.length}))
+    .then(recipes => res.json({recipes, count: recipes.length}))
     .catch(err => res.status(404).json({msg: "No recipes found"}));
 });
 
