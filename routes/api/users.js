@@ -135,6 +135,39 @@ router.get(
   }
 );
 
+// @route   PUT api/users
+// @desc    Update current users
+// @access  Private
+router.put("/", passport.authenticate("jwt", {session: false}), (req, res) => {
+  User.findById(req.user.id).then(user => {
+    const updatedData = {...user._doc, ...req.body};
+    const bmi = updatedData.weight / updatedData.height ** 2;
+    updatedData.bmi = bmi;
+    delete updatedData.email;
+    delete updatedData.password;
+    User.findOneAndUpdate({_id: updatedData._id}, updatedData, {
+      new: true,
+    })
+      .then(user => res.json(user))
+      .catch(err => console.log(err));
+  });
+});
+
+// @route   DELETE api/users
+// @desc    Delete user
+// @access  Private
+router.delete(
+  "/",
+  passport.authenticate("jwt", {session: false}),
+  (req, res) => {
+    User.findById(req.user.id)
+      .then(user => {
+        user.remove().then(() => res.json({success: true}));
+      })
+      .catch(err => res.status(404).json({msg: "No user found"}));
+  }
+);
+
 // @route   GET api/users/favourites
 // @desc    Get favourites
 // @access  Private
