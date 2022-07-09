@@ -15,10 +15,10 @@ const validatePagination = require("../../validation/pagination");
 // @access  Public
 router.get("/test", (req, res) => res.json({msg: "Recipes Works"}));
 
-// @route   GET api/recipes/:name&:mealType&:cuisine&:calorie_type&:suggested
+// @route   GET api/recipes/:name&:mealType&:cuisine&:calorie_type
 // @desc    Get recipes by name, mealType, cuisine, calorie_type
-// @access  Private
-router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
+// @access  Public
+router.get("/", (req, res) => {
   const {errors, isValid} = validatePagination(req.query);
 
   // Check Validation
@@ -32,18 +32,6 @@ router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
   if (req.query.name) {
     queryParams.name = {$regex: req.query.name, $options: "i"};
   }
-  if (req.query.suggested == "true") {
-    if (req.user.bmi <= 18.5) {
-      queryParams.calories_per_serving = {$gte: 200};
-    }
-    if (req.user.bmi > 18.5 && req.user.bmi < 24.9) {
-      queryParams.calories_per_serving = {$gte: 200, $lte: 400};
-    }
-    if (req.user.bmi > 24.9) {
-      queryParams.calories_per_serving = {$lte: 200};
-    }
-    delete queryParams.suggested;
-  }
   delete queryParams.page;
   delete queryParams.limit;
   Recipe.find(queryParams)
@@ -53,6 +41,44 @@ router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
     .then(recipes => res.json({recipes, count: recipes.length}))
     .catch(err => res.status(404).json({msg: "No recipes found"}));
 });
+
+// @route   GET api/recipes/suggested/:name&:mealType&:cuisine&:calorie_type
+// @desc    Get suggested recipes by name, mealType, cuisine, calorie_type
+// @access  Private
+router.get(
+  "/suggested",
+  passport.authenticate("jwt", {session: false}),
+  (req, res) => {
+    const {errors, isValid} = validatePagination(req.query);
+
+    // Check Validation
+    if (!isValid) {
+      // If any errors, send 400 with errors object
+      return res.status(400).json(errors);
+    }
+    let queryParams = {
+      ...req.query,
+    };
+    if (req.query.name) {
+      queryParams.name = {$regex: req.query.name, $options: "i"};
+    }
+    if (req.user.bmi <= 18.5) {
+      queryParams.calories_per_serving = {$gte: 200};
+    } else if (req.user.bmi > 18.5 && req.user.bmi < 24.9) {
+      queryParams.calories_per_serving = {$gte: 200, $lte: 400};
+    } else if (req.user.bmi > 24.9) {
+      queryParams.calories_per_serving = {$lte: 200};
+    }
+    delete queryParams.page;
+    delete queryParams.limit;
+    Recipe.find(queryParams)
+      .sort({date: -1})
+      .skip((Number(req.query.page) - 1) * Number(req.query.limit))
+      .limit(Number(req.query.limit))
+      .then(recipes => res.json({recipes, count: recipes.length}))
+      .catch(err => res.status(404).json({msg: "No recipes found"}));
+  }
+);
 
 // @route   GET api/recipes/:id
 // @desc    Get recipes by id
