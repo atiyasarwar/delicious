@@ -9,7 +9,7 @@ const Ingredient = require("../../models/Ingredient");
 const validateIngredientInput = require("../../validation/ingredient");
 
 // @route   GET api/ingredients/test
-// @desc    Tests post route
+// @desc    Tests ingredient route
 // @access  Public
 router.get("/test", (req, res) => res.json({msg: "Ingredients Works"}));
 

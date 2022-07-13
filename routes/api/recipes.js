@@ -11,12 +11,12 @@ const validateRecipeInput = require("../../validation/recipes");
 const validatePagination = require("../../validation/pagination");
 
 // @route   GET api/recipes/test
-// @desc    Tests post route
+// @desc    Tests recipe route
 // @access  Public
 router.get("/test", (req, res) => res.json({msg: "Recipes Works"}));
 
-// @route   GET api/recipes/:name&:mealType&:cuisine&:calorie_type
-// @desc    Get recipes by name, mealType, cuisine, calorie_type
+// @route   GET api/recipes/:name&:meal_type&:cuisine&:calorie_type
+// @desc    Get recipes by name, meal_type, cuisine, calorie_type
 // @access  Public
 router.get("/", (req, res) => {
   const {errors, isValid} = validatePagination(req.query);
@@ -42,8 +42,8 @@ router.get("/", (req, res) => {
     .catch(err => res.status(404).json({msg: "No recipes found"}));
 });
 
-// @route   GET api/recipes/suggested/:name&:mealType&:cuisine&:calorie_type
-// @desc    Get suggested recipes by name, mealType, cuisine, calorie_type
+// @route   GET api/recipes/suggested/:name&:meal_type&:cuisine&:calorie_type
+// @desc    Get suggested recipes by name, meal_type, cuisine, calorie_type
 // @access  Private
 router.get(
   "/suggested",
