@@ -6,6 +6,7 @@ const passport = require("passport");
 const users = require("./routes/api/users");
 const recipes = require("./routes/api/recipes");
 const ingredients = require("./routes/api/ingredients");
+const cors = require("cors");
 
 const app = express();
 
@@ -21,6 +22,8 @@ mongoose
   .connect(db)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log(err));
+
+app.use(cors());
 
 // Passport middleware
 app.use(passport.initialize());
