@@ -21,7 +21,7 @@ router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
     ? {name: {$regex: req.query.name, $options: "i"}}
     : null;
   Ingredient.find(queryParams)
-    .sort({id: -1})
+    .sort({_id: -1})
     .then(ingredient => res.json({ingredient, count: ingredient.length}))
     .catch(err =>
       res.status(404).json({ingredientnotfound: "No ingredients found"})
