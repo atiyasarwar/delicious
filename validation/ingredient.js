@@ -10,7 +10,7 @@ module.exports = function validateIngredientInput(data) {
     : "";
 
   if (!Validator.isLength(data.name, {min: 2, max: 100})) {
-    errors.name = "Ingredient name is required.";
+    errors.name = "Ingredient name must be greater than 2 characters.";
   }
 
   if (Validator.isEmpty(String(data.calories_p_100))) {
