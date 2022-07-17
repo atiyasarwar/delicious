@@ -22,7 +22,6 @@ router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
     : null;
   Ingredient.find(queryParams)
     .sort({id: -1})
-    .limit(20)
     .then(ingredient => res.json(ingredient))
     .catch(err =>
       res.status(404).json({ingredientnotfound: "No ingredients found"})
