@@ -17,9 +17,10 @@ router.get("/test", (req, res) => res.json({msg: "Ingredients Works"}));
 // @desc    Get ingredient by name
 // @access  Private
 router.get("/", passport.authenticate("jwt", {session: false}), (req, res) => {
-  Ingredient.find(
-    req.query.name && {name: {$regex: req.query.name, $options: "i"}}
-  )
+  const queryParams = {
+    name: {$regex: req.query.name ? req.query.name : "", $options: "i"},
+  };
+  Ingredient.find(queryParams)
     .sort({_id: -1})
     .then(ingredient => res.json({ingredient, count: ingredient.length}))
     .catch(err =>
